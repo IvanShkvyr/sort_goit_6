@@ -1,4 +1,5 @@
 import pathlib
+import shutil
 import sys
 
 
@@ -31,11 +32,17 @@ def main():
 
     dir_list, file_list = iter_files_on_dirs(path, dir_list, file_list)
 
-    file_dict = check_file_extension(file_list)
+    file_dict, extension_set = check_file_extension(file_list)  # розділити сет на відомі скрипту файли і невідомі-------------
 
-    for i, j in file_dict.items():
-        for jj in j:
-            print(f"{i}-----{jj}\n\n")
+    create_folders(file_dict,path)
+
+    move_files(file_dict,path)
+
+
+
+
+
+
 
 
 def check_file_extension(file_list):
@@ -59,11 +66,16 @@ def check_file_extension(file_list):
                     "video":['AVI', 'MP4', 'MOV', 'MKV'],
                     "archives":['ZIP', 'GZ', 'TAR'],
                     }
+
+    extension_set = set()
     
+        
     for file_p in file_list:
         file_s = str(file_p)
         idx_extension = file_s.rfind(".")
         extension = file_s[idx_extension+1:]
+
+        extension_set.add(extension)  # розділити сет на відомі скрипту файли і невідомі-----------------
 
         if extension.upper() in extension_types["images"]:
             file_dict['images'].append(file_p)
@@ -78,7 +90,7 @@ def check_file_extension(file_list):
         else:
             file_dict["others"].append(file_p)
 
-    return file_dict
+    return file_dict, extension_set
         
 
 def check_path(user_path):
@@ -94,6 +106,19 @@ def check_path(user_path):
             print(f"{path} is file")
     else:
         print(f"path {path.absolute()} not exists")
+
+
+def create_folders(file_dict,path): # перевірити чи папки такі не створені там де перебираємо файли
+
+    """
+    creates folders to transfer found files according to formats
+    """
+    
+    for category, files in file_dict.items():
+        if not file_dict[category]:
+            continue
+        pathlib.Path(str(path) + "/" + category).mkdir()
+
 
 
 def iter_files_on_dirs(path, dir_list, file_list):
@@ -113,7 +138,29 @@ def iter_files_on_dirs(path, dir_list, file_list):
     return dir_list, file_list
 
 
-def normalize(file_name):
+def move_files(file_dict,path):
+    """
+    ----------------------------------------
+    """
+
+    for category, files_path in file_dict.items():
+        
+        if category == "archives":
+            continue
+
+        for file_path in files_path:
+            file_name_full = pathlib.Path(file_path).name
+            idx_extension = file_name_full.rfind(".")
+            file_name = file_name_full[:idx_extension]
+            extension = file_name_full[idx_extension+1:]
+            norm_file_name = normalize(file_name)
+            dst = pathlib.Path(str(path) + "/" + category + "/" + norm_file_name + "." + extension)
+
+            shutil.move(file_path, dst)
+
+
+
+def normalize(file_name):  # якщо ім'я вже було то додати символ в кінці файлу
 
     """
     returns the normalized filename
