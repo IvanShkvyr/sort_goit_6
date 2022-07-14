@@ -21,6 +21,7 @@ def main():
     """
     dir_list, file_list = [], []
 
+
     if len(sys.argv) < 2:
         user_path = ""
     else:
@@ -30,11 +31,55 @@ def main():
 
     dir_list, file_list = iter_files_on_dirs(path, dir_list, file_list)
 
+    file_dict = check_file_extension(file_list)
+
+    for i, j in file_dict.items():
+        for jj in j:
+            print(f"{i}-----{jj}\n\n")
 
 
+def check_file_extension(file_list):
+    """
+    checks the file extension
+    creates a dictionary with a set of files divided into groups
+    """
+    file_dict = {
+                    "images":[],
+                    "documents":[],
+                    "audio":[],
+                    "video":[],
+                    "archives":[],
+                    "others":[],
+                }
 
+    extension_types = {
+                    "images":['JPEG', 'PNG', 'JPG', 'SVG','BMP', "TIF", "TIFF"],
+                    "documents":['DOC', 'DOCX', 'TXT', 'PDF', 'XLSX', 'PPTX'],
+                    "audio":['MP3', 'OGG', 'WAV', 'AMR'],
+                    "video":['AVI', 'MP4', 'MOV', 'MKV'],
+                    "archives":['ZIP', 'GZ', 'TAR'],
+                    }
+    
+    for file_p in file_list:
+        file_s = str(file_p)
+        idx_extension = file_s.rfind(".")
+        extension = file_s[idx_extension+1:]
 
+        if extension.upper() in extension_types["images"]:
+            file_dict['images'].append(file_p)
+        elif extension.upper() in extension_types["documents"]:
+            file_dict["documents"].append(file_p)
+        elif extension.upper() in extension_types["audio"]:
+            file_dict["audio"].append(file_p)
+        elif extension.upper() in extension_types["video"]:
+            file_dict["video"].append(file_p)
+        elif extension.upper() in extension_types["archives"]:
+            file_dict["archives"].append(file_p)
+        else:
+            file_dict["others"].append(file_p)
 
+    return file_dict
+        
 
 def check_path(user_path):
     
