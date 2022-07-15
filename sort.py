@@ -38,10 +38,7 @@ def main():
 
     move_files(file_dict,path)
 
-
-
-
-
+    unpacking_archive(file_dict,path)
 
 
 
@@ -109,7 +106,7 @@ def check_path(user_path):
 
 
 def create_folders(file_dict,path): # перевірити чи папки такі не створені там де перебираємо файли
-
+                                    # необхідно щоб приймав імя і щлях
     """
     creates folders to transfer found files according to formats
     """
@@ -140,7 +137,7 @@ def iter_files_on_dirs(path, dir_list, file_list):
 
 def move_files(file_dict,path):
     """
-    ----------------------------------------
+    move files of different types to appropriate folders
     """
 
     for category, files_path in file_dict.items():
@@ -173,6 +170,27 @@ def normalize(file_name):  # якщо ім'я вже було то додати 
             file_name = file_name.replace(char, '_')
 
     return file_name.translate(TRANS)
+
+
+def unpacking_archive(file_dict,path):
+    """
+    moves the archive to the appropriate folder and unpacks it
+    """
+
+    for category, files_path in file_dict.items():
+        
+        if category == "archives":
+            for file_path in files_path:
+                file_name_full = pathlib.Path(file_path).name
+                idx_extension = file_name_full.rfind(".")
+                file_name = file_name_full[:idx_extension]
+                norm_file_name = normalize(file_name)
+
+                extract_directory = pathlib.Path(str(path) + "/" + category+ "/" + norm_file_name)
+                pathlib.Path(extract_directory).mkdir()
+
+
+                shutil.unpack_archive(file_path, extract_directory)
 
 
 if __name__ == "__main__":
