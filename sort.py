@@ -1,4 +1,5 @@
 import pathlib
+import os
 import shutil
 import sys
 
@@ -32,6 +33,8 @@ def main():
 
     dir_list, file_list = iter_files_on_dirs(path, dir_list, file_list)
 
+    dir_list.pop(0)
+
     file_dict, extension_set = check_file_extension(file_list)  # розділити сет на відомі скрипту файли і невідомі-------------
 
     create_folders(file_dict,path)
@@ -39,6 +42,8 @@ def main():
     move_files(file_dict,path)
 
     unpacking_archive(file_dict,path)
+
+    delate_folders(dir_list)
 
 
 
@@ -117,6 +122,23 @@ def create_folders(file_dict,path): # перевірити чи папки та�
         pathlib.Path(str(path) + "/" + category).mkdir()
 
 
+def delate_folders(dir_list):
+
+    """
+    delate empty folders
+    """
+    for dir_path in dir_list:
+        try:            
+            pathlib.Path(dir_path).rmdir()
+            dir_list.remove(dir_path)
+        except OSError:
+            continue
+        
+        if len(dir_list) == 0:
+            break
+        else:
+            delate_folders(dir_list)
+
 
 def iter_files_on_dirs(path, dir_list, file_list):
     
@@ -156,7 +178,6 @@ def move_files(file_dict,path):
             shutil.move(file_path, dst)
 
 
-
 def normalize(file_name):  # якщо ім'я вже було то додати символ в кінці файлу
 
     """
@@ -189,8 +210,9 @@ def unpacking_archive(file_dict,path):
                 extract_directory = pathlib.Path(str(path) + "/" + category+ "/" + norm_file_name)
                 pathlib.Path(extract_directory).mkdir()
 
-
                 shutil.unpack_archive(file_path, extract_directory)
+
+                os.unlink(file_path)
 
 
 if __name__ == "__main__":
