@@ -15,16 +15,22 @@ TRANS = {
         1111: 'ji', 1031: 'JI', 1169: 'g', 1168: 'G'
         }
 
+file_names_dict = {
+                    "images":[],
+                    "documents":[],
+                    "audio":[],
+                    "video":[],
+                    "archives":[],
+                    "others":[],
+                    }
 
 def main():
-
     """
     the main function
     """
     dir_list, file_list = [], []
-
-
-    if len(sys.argv) < 2:
+    
+    if len(sys.argv) < 2:  # checking if an argument was passed
         user_path = ""
     else:
         user_path = sys.argv[1]
@@ -33,24 +39,26 @@ def main():
 
     dir_list, file_list = iter_files_on_dirs(path, dir_list, file_list)
 
-    dir_list.pop(0)
+    dir_list.pop(0)  # delete the root folder
 
-    file_dict, extension_set = check_file_extension(file_list)  # розділити сет на відомі скрипту файли і невідомі-------------
+    file_dict, known_extension_set, unknown_extension_set  = check_file_extension(file_list)
 
-    create_folders(file_dict,path)
+    create_folders(file_dict, path)
 
-    move_files(file_dict,path)
+    file_names_dict = move_files(file_dict, path)
 
-    unpacking_archive(file_dict,path)
+    unpacking_archive(file_dict, path)
 
     delate_folders(dir_list)
 
+    return known_extension_set, unknown_extension_set, file_names_dict
 
 
 def check_file_extension(file_list):
     """
     checks the file extension
     creates a dictionary with a set of files divided into groups
+    returns a dictionary with absolute file addresses and a set with lists of known and unknown formats
     """
     file_dict = {
                     "images":[],
@@ -69,17 +77,17 @@ def check_file_extension(file_list):
                     "archives":['ZIP', 'GZ', 'TAR'],
                     }
 
-    extension_set = set()
+    unknown_extension_set = set()
+    known_extension_set = set()
     
         
     for file_p in file_list:
         file_s = str(file_p)
-        idx_extension = file_s.rfind(".")
+        idx_extension = file_s.rfind(".")  # find the file extension
         extension = file_s[idx_extension+1:]
+        known_extension_set.add(extension)
 
-        extension_set.add(extension)  # розділити сет на відомі скрипту файли і невідомі-----------------
-
-        if extension.upper() in extension_types["images"]:
+        if extension.upper() in extension_types["images"]:  # assigning files to the appropriate categories
             file_dict['images'].append(file_p)
         elif extension.upper() in extension_types["documents"]:
             file_dict["documents"].append(file_p)
@@ -91,16 +99,20 @@ def check_file_extension(file_list):
             file_dict["archives"].append(file_p)
         else:
             file_dict["others"].append(file_p)
+            unknown_extension_set.add(extension)
 
-    return file_dict, extension_set
+        known_extension_set = known_extension_set - unknown_extension_set
+
+    return file_dict, known_extension_set, unknown_extension_set
         
 
 def check_path(user_path):
-    
     """
-    checks the path to the file folder
+    check the path to the file folder
+    returns the path to the root folder
     """
     path = pathlib.Path(user_path)
+
     if path.exists():
         if path.is_dir():
             return path
@@ -110,8 +122,7 @@ def check_path(user_path):
         print(f"path {path.absolute()} not exists")
 
 
-def create_folders(file_dict,path): # перевірити чи папки такі не створені там де перебираємо файли
-                                    # необхідно щоб приймав імя і щлях
+def create_folders(file_dict,path): 
     """
     creates folders to transfer found files according to formats
     """
@@ -119,11 +130,14 @@ def create_folders(file_dict,path): # перевірити чи папки та�
     for category, files in file_dict.items():
         if not file_dict[category]:
             continue
-        pathlib.Path(str(path) + "/" + category).mkdir()
+
+        try:  # the block skips creating a folder if a folder with that name exists
+            pathlib.Path(str(path) + "/" + category).mkdir()
+        except FileExistsError:
+            continue
 
 
 def delate_folders(dir_list):
-
     """
     delate empty folders
     """
@@ -141,7 +155,6 @@ def delate_folders(dir_list):
 
 
 def iter_files_on_dirs(path, dir_list, file_list):
-    
     """
     the function iterates files and folders through the parent folder
     returns a list of file addresses and a list of folder addresses
@@ -161,10 +174,9 @@ def move_files(file_dict,path):
     """
     move files of different types to appropriate folders
     """
-
     for category, files_path in file_dict.items():
         
-        if category == "archives":
+        if category == "archives":  # files in this category are processed through the function unpacking_archive
             continue
 
         for file_path in files_path:
@@ -172,14 +184,33 @@ def move_files(file_dict,path):
             idx_extension = file_name_full.rfind(".")
             file_name = file_name_full[:idx_extension]
             extension = file_name_full[idx_extension+1:]
-            norm_file_name = normalize(file_name)
+
+            if category == "others":  # files in this category are processed without renaming (normalize)
+                norm_file_name = file_name
+
+                if norm_file_name in file_names_dict["others"]:  # checking whether such a file name already exists
+                    norm_file_name = rename(norm_file_name, category, file_names_dict)
+                    file_names_dict["others"].append(norm_file_name)
+                else:
+                    file_names_dict["others"].append(norm_file_name)
+
+            else:
+                norm_file_name = normalize(file_name)
+
+                if norm_file_name in file_names_dict[category]:  # checking whether such a file name already exists
+                    norm_file_name = rename(norm_file_name, category, file_names_dict)
+                    file_names_dict[category].append(norm_file_name)
+                else:
+                    file_names_dict[category].append(norm_file_name)
+
             dst = pathlib.Path(str(path) + "/" + category + "/" + norm_file_name + "." + extension)
 
             shutil.move(file_path, dst)
 
+    return file_names_dict
 
-def normalize(file_name):  # якщо ім'я вже було то додати символ в кінці файлу
 
+def normalize(file_name):
     """
     returns the normalized filename
     replaces other characters and spaces with an underscore
@@ -193,7 +224,18 @@ def normalize(file_name):  # якщо ім'я вже було то додати 
     return file_name.translate(TRANS)
 
 
-def unpacking_archive(file_dict,path):
+def rename(norm_file_name, category, file_names_dict):
+    """
+    rename file
+    """
+    while norm_file_name in file_names_dict[category]:
+        norm_file_name = norm_file_name + "_"  
+    
+    else:
+        return norm_file_name
+
+
+def unpacking_archive(file_dict, path):
     """
     moves the archive to the appropriate folder and unpacks it
     """
@@ -205,7 +247,14 @@ def unpacking_archive(file_dict,path):
                 file_name_full = pathlib.Path(file_path).name
                 idx_extension = file_name_full.rfind(".")
                 file_name = file_name_full[:idx_extension]
+
                 norm_file_name = normalize(file_name)
+
+                if norm_file_name in file_names_dict["archives"]:  # checking whether such a file name already exists
+                    norm_file_name = rename(norm_file_name, category, file_names_dict)
+                    file_names_dict["archives"].append(norm_file_name)
+                else:
+                    file_names_dict["archives"].append(norm_file_name)
 
                 extract_directory = pathlib.Path(str(path) + "/" + category+ "/" + norm_file_name)
                 pathlib.Path(extract_directory).mkdir()
@@ -219,6 +268,3 @@ if __name__ == "__main__":
     main()
 
 #python sort.py C:\Users\user\Desktop\Rozibraty
-#python sort.py C:\Users\user\Desktop\Rozibraty\відео_файл.avi
-#python sort.py grfeffde
-#python sort.py
