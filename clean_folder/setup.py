@@ -8,5 +8,5 @@ setup(name='clean_foldef',
       author_email='GIS2011i@gmail.com',
       license='MIT',
       packages=find_packages(),
-      entry_points={'console_scripts': ['sort=clean_foldef.sort:main']}
+      entry_points={'console_scripts': ['clean-folder=clean_foldef.sort:main']}
       )
